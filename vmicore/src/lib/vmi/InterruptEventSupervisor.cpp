@@ -64,7 +64,11 @@ namespace VmiCore
     {
         auto processDtb = targetVA >= PagingDefinitions::kernelspaceLowerBoundary ? processInformation.processDtb
                                                                                   : processInformation.processUserDtb;
+        auto processDtbDesc = targetVA >= PagingDefinitions::kernelspaceLowerBoundary ? "processInformation.processDtb"
+                                                                                  : "processInformation.processUserDtb";
+        logger->error(fmt::format("DTB: {}", processDtbDesc));
         auto targetPA = vmiInterface->convertVAToPA(targetVA, processDtb);
+        logger->error("DID TRANSLATE");
         auto targetGFN = targetPA >> PagingDefinitions::numberOfPageIndexBits;
         auto breakpoint = std::make_shared<Breakpoint>(
             targetPA,
