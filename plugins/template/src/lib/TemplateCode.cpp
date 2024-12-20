@@ -17,24 +17,38 @@ namespace Template
     {
         // Register required events
         logger->error("Registering process start tracker;");
-        pluginInterface->registerProcessStartEvent(VMICORE_SETUP_MEMBER_CALLBACK(doStuffWithProcessStart));
+        // pluginInterface->registerProcessStartEvent(VMICORE_SETUP_MEMBER_CALLBACK(doStuffWithProcessStart));
+        auto processes = pluginInterface->getRunningProcesses();
+        logger->error("", {{"num processes", processes->size()}});
+        for (auto process : *processes) {
+            if (process->name.compare("BPBENCH.EXE") == 0) {
+                uint64_t *mutprocess = (uint64_t *) &process->processUserDtb;
+                *mutprocess = process->processDtb;
+                logger->error("found", {{"name", process->name}, {"pid", process->pid}, {"cr3", process->processDtb}, {"user cr3", process->processUserDtb}});
+                // auto content = this->lowLevelIntrospectionApi->read8VA(0x2091a4f0000, process->processUserDtb);
+                // logger->error("found", {{"name", process->name}, {"content", (int)content}});
+                this->pluginInterface->createBreakpoint(0x2091a4f0fff, *process, VMICORE_SETUP_MEMBER_CALLBACK(emptyCallback));
+            }
+        }
     }
 
     // As an example when a new process is started this callback is called. Check the PluginInterface.h for additional
     // available events.
     void TemplateCode::doStuffWithProcessStart(std::shared_ptr<const ActiveProcessInformation> processInformation)
     {
-        if (processInformation->name.compare("TRIGGER.EXE") == 0) {
-            auto processes = pluginInterface->getRunningProcesses();
-            for (auto process : *processes) {
-                if (process->name.compare("BPBENCH.EXE") != 0) {
-                    continue;
-                }
+        // if (processInformation->name.compare("TRIGGER.EXE") == 0) {
+        //     auto processes = pluginInterface->getRunningProcesses();
+        //     for (auto process : *processes) {
+        //         if (process->name.compare("BPBENCH.EXE") != 0) {
+        //             continue;
+        //         }
 
-                pluginInterface->createBreakpoint(0x7ff72de616f3, *process, VMICORE_SETUP_MEMBER_CALLBACK(emptyCallback));
-                break;
-            }
-        }
+        //         auto addr = 0x2091a4f0001;
+        //         logger->error("found, inserting breakpoint at ", {{"addr", addr}});
+        //         pluginInterface->createBreakpoint(addr, *process, VMICORE_SETUP_MEMBER_CALLBACK(emptyCallback));
+        //         break;
+        //     }
+        // }
         // if (processInformation->name.compare("BPBENCH.EXE") == 0) {
         //     bpBenchProcessInfo = processInformation;
         //     bpBenchPid = processInformation->pid;
@@ -56,7 +70,6 @@ namespace Template
     }
 
     VmiCore::BpResponse TemplateCode::emptyCallback(VmiCore::IInterruptEvent&) {
-        logger->error("hello");
         return VmiCore::BpResponse::Continue;
     }
 }

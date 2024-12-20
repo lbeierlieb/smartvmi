@@ -46,7 +46,7 @@ namespace VmiCore
         singleStepSupervisor->initializeSingleStepEvents();
         singleStepCallbackFunction = VMICORE_SETUP_SAFE_MEMBER_CALLBACK(singleStepCallback);
         contextSwitchCallbackFunction = VMICORE_SETUP_SAFE_MEMBER_CALLBACK(contextSwitchCallback);
-        registerEventSupervisor->setContextSwitchCallback(contextSwitchCallbackFunction);
+        //registerEventSupervisor->setContextSwitchCallback(contextSwitchCallbackFunction);
     }
 
     void InterruptEventSupervisor::teardown()
@@ -64,11 +64,7 @@ namespace VmiCore
     {
         auto processDtb = targetVA >= PagingDefinitions::kernelspaceLowerBoundary ? processInformation.processDtb
                                                                                   : processInformation.processUserDtb;
-        auto processDtbDesc = targetVA >= PagingDefinitions::kernelspaceLowerBoundary ? "processInformation.processDtb"
-                                                                                  : "processInformation.processUserDtb";
-        logger->error(fmt::format("DTB: {}", processDtbDesc));
         auto targetPA = vmiInterface->convertVAToPA(targetVA, processDtb);
-        logger->error("DID TRANSLATE");
         auto targetGFN = targetPA >> PagingDefinitions::numberOfPageIndexBits;
         auto breakpoint = std::make_shared<Breakpoint>(
             targetPA,
@@ -83,161 +79,72 @@ namespace VmiCore
             processDtb,
             global);
 
-        std::scoped_lock guard(lock);
-        auto bpPage = breakpointsByGFN.find(targetGFN);
-        // Check if there already is an interrupt registered on this page
-        if (bpPage == breakpointsByGFN.end())
-        {
-            bpPage =
-                breakpointsByGFN
-                    .insert({targetGFN,
-                             BpPage{.Breakpoints = {},
-                                    // One PageGuard guards a whole memory page on which several interrupts may reside
-                                    .PageGuard = createPageGuard(targetVA, processDtb, targetGFN)}})
-                    .first;
-        }
+        pageGuard = createPageGuard(targetVA, processDtb, targetGFN);
 
         // Register new INT3
-        if (!bpPage->second.Breakpoints.contains(targetPA))
-        {
-            vmiInterface->flushV2PCache(LibvmiInterface::flushAllPTs);
-            vmiInterface->flushPageCache();
-            storeOriginalValue(targetPA);
-            enableEvent(targetPA);
+        vmiInterface->flushV2PCache(LibvmiInterface::flushAllPTs);
+        vmiInterface->flushPageCache();
+        this->targetPA = targetPA;
+        storeOriginalValue(targetPA);
+        enableEvent(targetPA);
 
-            bpPage->second.Breakpoints[targetPA] = std::vector<std::shared_ptr<Breakpoint>>{breakpoint};
-        }
-        // If there is already an interrupt registered to that PA, simply add the event to management
-        else
-        {
-            bpPage->second.Breakpoints.at(targetPA).push_back(breakpoint);
-            // The already registered interrupt is for another process
-            if (paToBreakpointStatus.at(targetPA) == BPStateResponse::Disable)
-            {
-                enableEvent(targetPA);
-            }
-        }
+        this->breakpoint = breakpoint;
+            enableEvent(targetPA);
         return breakpoint;
     }
 
     void InterruptEventSupervisor::deleteBreakpoint(IBreakpoint* breakpoint)
     {
-        std::scoped_lock guard(lock);
-
-        auto targetPA = breakpoint->getTargetPA();
-        auto breakpointsAtGFN = breakpointsByGFN.find(targetPA >> PagingDefinitions::numberOfPageIndexBits);
-        if (breakpointsAtGFN == breakpointsByGFN.end())
-        {
-            logger->warning("Breakpoint not found",
-                            {{"Function", std::source_location::current().function_name()}, {"PA", targetPA}});
-            vmiInterface->resumeVm();
-            return;
-        }
-        auto breakpointsAtPA = breakpointsAtGFN->second.Breakpoints.find(targetPA);
-
-        eraseBreakpointAtAddress(breakpointsAtPA->second, breakpoint);
-        if (breakpointsAtPA->second.empty())
-        {
-            breakpointsAtGFN->second.Breakpoints.erase(breakpointsAtPA);
-
-            if (vmiInterface->areEventsPending())
-            {
-                logger->debug(fmt::format("{}: Process pending events before removing breakpoint", __func__));
-                // Make sure that all pending events are processed, so we don't receive interrupt events for removed
-                // breakpoints
-                vmiInterface->eventsListen(0);
-            }
-
-            removeInterrupt(targetPA);
-            if (breakpointsAtGFN->second.Breakpoints.empty())
-            {
-                breakpointsAtGFN->second.PageGuard->teardown();
-                breakpointsByGFN.erase(breakpointsAtGFN);
-            }
-        }
     }
 
     void InterruptEventSupervisor::enableEvent(addr_t targetPA)
     {
         vmiInterface->write8PA(targetPA, INT3_BREAKPOINT);
-        paToBreakpointStatus[targetPA] = BPStateResponse::Enable;
+        breakpointStatus = BPStateResponse::Enable;
     }
 
     void InterruptEventSupervisor::disableEvent(addr_t targetPA)
     {
-        vmiInterface->write8PA(targetPA, originalValuesByTargetPA[targetPA]);
-        paToBreakpointStatus[targetPA] = BPStateResponse::Disable;
+        vmiInterface->write8PA(targetPA, originalValue);
+        breakpointStatus = BPStateResponse::Disable;
     }
 
     event_response_t InterruptEventSupervisor::_defaultInterruptCallback([[maybe_unused]] vmi_instance_t vmi,
                                                                          vmi_event_t* event)
     {
-        auto eventResponse = VMI_EVENT_RESPONSE_NONE;
-        event->interrupt_event.reinject = REINJECT_INTERRUPT;
-
-        auto eventPA =
-            (event->interrupt_event.gfn << PagingDefinitions::numberOfPageIndexBits) + event->interrupt_event.offset;
-        if (interruptEventSupervisor == nullptr)
-        {
-            GlobalControl::logger()->error(
-                "Caught interrupt event with destroyed InterruptEventSupervisor",
-                {CxxLogField("logger", loggerName), CxxLogField("eventPA", fmt::format("{:#x}", eventPA))});
-            return eventResponse;
-        }
-
-        auto breakpointsAtEventGFN =
-            interruptEventSupervisor->breakpointsByGFN.find(eventPA >> PagingDefinitions::numberOfPageIndexBits);
-        if (breakpointsAtEventGFN != interruptEventSupervisor->breakpointsByGFN.end())
-        {
-            auto breakpointsAtEventPA = breakpointsAtEventGFN->second.Breakpoints.find(eventPA);
-            if (breakpointsAtEventPA != breakpointsAtEventGFN->second.Breakpoints.end())
-            {
-                event->interrupt_event.reinject = DONT_REINJECT_INTERRUPT;
-                return interruptEventSupervisor->interruptCallback(
-                    eventPA, event->vcpu_id, breakpointsAtEventPA->second);
-            }
-        }
-
-        if (event->interrupt_event.reinject == REINJECT_INTERRUPT)
-        {
-            GlobalControl::logger()->debug("Reinject interrupt into guest OS",
-                                           {{"logger", loggerName}, {"eventPA", fmt::format("{:#x}", eventPA)}});
-        }
-
-        return eventResponse;
+        event->interrupt_event.reinject = DONT_REINJECT_INTERRUPT;
+        return interruptEventSupervisor->interruptCallback(
+            event->vcpu_id);
     }
 
     event_response_t InterruptEventSupervisor::interruptCallback(
-        addr_t interruptPA, uint32_t vcpuId, const std::vector<std::shared_ptr<Breakpoint>>& breakpoints)
+        uint32_t vcpuId)
     {
         bool deactivateInterrupt = false;
 
         vmiInterface->flushV2PCache(LibvmiInterface::flushAllPTs);
         vmiInterface->flushPageCache();
 
-        for (auto& breakpoint : breakpoints)
+        try
         {
-            try
+            auto eventResponse = breakpoint->callback(interruptEvent);
+            if (eventResponse == BpResponse::Deactivate)
             {
-                auto eventResponse = breakpoint->callback(interruptEvent);
-                if (eventResponse == BpResponse::Deactivate)
-                {
-                    deactivateInterrupt = true;
-                }
-            }
-            catch (const std::exception& e)
-            {
-                GlobalControl::logger()->error("Interrupt callback failed",
-                                               {{"logger", loggerName}, {"exception", e.what()}});
-                GlobalControl::eventStream()->sendErrorEvent(e.what());
+                deactivateInterrupt = true;
             }
         }
+        catch (const std::exception& e)
+        {
+            GlobalControl::logger()->error("Interrupt callback failed",
+                                           {{"logger", loggerName}, {"exception", e.what()}});
+            GlobalControl::eventStream()->sendErrorEvent(e.what());
+        }
 
-        disableEvent(interruptPA);
+        disableEvent(targetPA);
 
         if (!deactivateInterrupt)
         {
-            singleStepSupervisor->setSingleStepCallback(vcpuId, singleStepCallbackFunction, interruptPA);
+          singleStepSupervisor->setSingleStepCallback(vcpuId, singleStepCallbackFunction, targetPA);
         }
 
         return VMI_EVENT_RESPONSE_NONE;
@@ -250,23 +157,7 @@ namespace VmiCore
 
     void InterruptEventSupervisor::contextSwitchCallback(vmi_event_t* registerEvent)
     {
-        auto newDtb = registerEvent->reg_event.value;
-
-        for (const auto& [_bpPageGFN, bpPage] : interruptEventSupervisor->breakpointsByGFN)
-        {
-            for (const auto& [breakpointsPA, breakpoints] : bpPage.Breakpoints)
-            {
-                BPStateResponse currentBreakpointState = paToBreakpointStatus.at(breakpointsPA);
-
-                auto newBreakpointState = getNewBreakpointState(newDtb, breakpoints);
-
-                if (newBreakpointState != currentBreakpointState)
-                {
-                    paToBreakpointStatus.at(breakpointsPA) = newBreakpointState;
-                    interruptEventSupervisor->updateBreakpointState(newBreakpointState, breakpointsPA);
-                }
-            }
-        }
+        logger->error("Spam");
     }
 
     std::shared_ptr<InterruptGuard>
@@ -289,45 +180,25 @@ namespace VmiCore
         {
             throw VmiException(
                 fmt::format("{}: Breakpoint originalValue @ {:#x} is already an INT3 breakpoint.", __func__, targetPA));
+        } else {
+            logger->error(fmt::format("original value was {:#x} at {:#x}", originalValue, targetPA));
         }
 
-        originalValuesByTargetPA[targetPA] = originalValue;
+        this->originalValue = originalValue;
     }
 
     void InterruptEventSupervisor::clearInterruptEventHandling()
     {
-        vmiInterface->pauseVm();
-
-        for (const auto& [_gfn, breakpointsAtGfn] : breakpointsByGFN)
-        {
-            for (const auto& [breakpointPA, _breakpointsAtPa] : breakpointsAtGfn.Breakpoints)
-            {
-                removeInterrupt(breakpointPA);
-            }
-            breakpointsAtGfn.PageGuard->teardown();
-        }
-
-        breakpointsByGFN.clear();
-        vmiInterface->clearEvent(*event, false);
-
-        vmiInterface->resumeVm();
     }
 
     void
     InterruptEventSupervisor::eraseBreakpointAtAddress(std::vector<std::shared_ptr<Breakpoint>>& breakpointsAtAddress,
                                                        const IBreakpoint* breakpoint)
     {
-        breakpointsAtAddress.erase(std::find_if(breakpointsAtAddress.cbegin(),
-                                                breakpointsAtAddress.cend(),
-                                                [breakpoint](auto sharedInterruptEventPtr)
-                                                { return sharedInterruptEventPtr.get() == breakpoint; }));
     }
 
     void InterruptEventSupervisor::removeInterrupt(addr_t targetPA)
     {
-        auto originalValue = originalValuesByTargetPA.extract(targetPA);
-        vmiInterface->write8PA(targetPA, originalValue.mapped());
-        paToBreakpointStatus.erase(targetPA);
     }
 
     BPStateResponse
@@ -335,36 +206,10 @@ namespace VmiCore
                                                     const std::vector<std::shared_ptr<Breakpoint>>& breakpoints)
     {
         using enum BPStateResponse;
-        for (const auto& breakpoint : breakpoints)
-        {
-            auto newState = breakpoint->getNewBreakpointState(newDtb);
-            if (newState == Enable) // if at least one bp needs to be enabled, enable it
-            {
                 return Enable;
-            }
-        }
-        return Disable;
     }
 
     void InterruptEventSupervisor::updateBreakpointState(BPStateResponse state, uint64_t targetPA) const
     {
-        using enum BPStateResponse;
-        switch (state)
-        {
-            case Enable:
-            {
-                interruptEventSupervisor->enableEvent(targetPA);
-                break;
-            }
-            case Disable:
-            {
-                interruptEventSupervisor->disableEvent(targetPA);
-                break;
-            }
-            default:
-            {
-                throw VmiException(fmt::format("Invalid breakpoint state"));
-            }
-        }
     }
 }

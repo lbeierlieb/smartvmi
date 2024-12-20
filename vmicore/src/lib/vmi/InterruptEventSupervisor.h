@@ -66,9 +66,7 @@ namespace VmiCore
 
         static event_response_t _defaultInterruptCallback(vmi_instance_t vmi, vmi_event_t* event);
 
-        [[nodiscard]] event_response_t interruptCallback(addr_t interruptPA,
-                                                         uint32_t vcpuId,
-                                                         const std::vector<std::shared_ptr<Breakpoint>>& breakpoints);
+        [[nodiscard]] event_response_t interruptCallback(uint32_t vcpuId);
 
         void singleStepCallback(__attribute__((unused)) vmi_event_t* singleStepEvent);
 
@@ -92,9 +90,11 @@ namespace VmiCore
         std::shared_ptr<ILogging> loggingLib;
         std::unique_ptr<ILogger> logger;
 
-        std::unordered_map<addr_t, uint8_t> originalValuesByTargetPA;
-        std::unordered_map<addr_t, BpPage> breakpointsByGFN{};
-        std::unordered_map<addr_t, BPStateResponse> paToBreakpointStatus{};
+        uint8_t originalValue;
+        addr_t targetPA;
+        std::shared_ptr<Breakpoint> breakpoint;
+        std::shared_ptr<InterruptGuard> pageGuard;
+        BPStateResponse breakpointStatus;
         std::function<void(vmi_event_t*)> singleStepCallbackFunction;
         std::function<void(vmi_event_t*)> contextSwitchCallbackFunction;
         // Event needs to be allocated separately in order to avoid invalidating references (e.g. in libvmi) when the

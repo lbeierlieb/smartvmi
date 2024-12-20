@@ -41,8 +41,8 @@ namespace VmiCore::Windows
                       {{"VA", fmt::format("{:#x}", processNotifyFunctionVA)}});
         auto notifyProcessCallbackFunction = VMICORE_SETUP_SAFE_MEMBER_CALLBACK(pspCallProcessNotifyRoutinesCallback);
 
-        notifyProcessInterruptEvent = interruptEventSupervisor->createBreakpoint(
-            processNotifyFunctionVA, *systemProcess, notifyProcessCallbackFunction, true);
+        //notifyProcessInterruptEvent = interruptEventSupervisor->createBreakpoint(
+            //processNotifyFunctionVA, *systemProcess, notifyProcessCallbackFunction, true);
     }
 
     void SystemEventSupervisor::startKeBugCheck2Monitoring()
@@ -51,8 +51,8 @@ namespace VmiCore::Windows
         logger->debug("Obtained starting address of KeBugCheck2", {{"VA", fmt::format("{:#x}", bugCheckFunctionVA)}});
         auto bugCheckCallbackFunction = VMICORE_SETUP_SAFE_MEMBER_CALLBACK(keBugCheck2Callback);
 
-        bugCheckInterruptEvent = interruptEventSupervisor->createBreakpoint(
-            bugCheckFunctionVA, *systemProcess, bugCheckCallbackFunction, true);
+        //bugCheckInterruptEvent = interruptEventSupervisor->createBreakpoint(
+            //bugCheckFunctionVA, *systemProcess, bugCheckCallbackFunction, true);
     }
 
     BpResponse SystemEventSupervisor::pspCallProcessNotifyRoutinesCallback(IInterruptEvent& event)

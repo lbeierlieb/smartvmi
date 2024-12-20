@@ -30,65 +30,65 @@ namespace VmiCore
 
     void InterruptGuard::initialize()
     {
-        // setting simple read events is unsupported by EPT
-        SETUP_MEM_EVENT(&guardEvent, targetGFN, VMI_MEMACCESS_RW, &InterruptGuard::_guardCallback, false);
-        guardEvent.data = this;
+        //   // setting simple read events is unsupported by EPT
+        //   SETUP_MEM_EVENT(&guardEvent, targetGFN, VMI_MEMACCESS_RW, &InterruptGuard::_guardCallback, false);
+        //   guardEvent.data = this;
 
-        // This will never change so we initialize this here once
-        emulateReadData.dont_free = true;
-        emulateReadData.size = 16;
+        //   // This will never change so we initialize this here once
+        //   emulateReadData.dont_free = true;
+        //   emulateReadData.size = 16;
 
-        auto pageBaseVA = targetVA & PagingDefinitions::stripPageOffsetMask;
-        if (!vmiInterface->readXVA(pageBaseVA, processDtb, shadowPage, PagingDefinitions::pageSizeInBytes))
-        {
-            throw VmiException(fmt::format("{}: Unable to create Interrupt @ {:#x} in system with cr3 {:#x}",
-                                           std::source_location::current().function_name(),
-                                           pageBaseVA,
-                                           processDtb));
-        }
-        // we need a small buffer of data from the subsequent page because memory reads may be overlapping
-        auto bytesFromNextPage = std::vector<uint8_t>(16);
-        if (vmiInterface->readXVA(pageBaseVA + PagingDefinitions::pageSizeInBytes,
-                                  processDtb,
-                                  bytesFromNextPage,
-                                  bytesFromNextPage.size()))
-        {
-            std::copy(bytesFromNextPage.begin(),
-                      bytesFromNextPage.end(),
-                      shadowPage.begin() + PagingDefinitions::pageSizeInBytes);
-        }
-        else
-        {
-            logger->warning(fmt::format("{}: Unable to read over page bounds from page: {} with dtb: {}",
-                                        std::source_location::current().function_name(),
-                                        pageBaseVA,
-                                        processDtb));
-        }
+        //   auto pageBaseVA = targetVA & PagingDefinitions::stripPageOffsetMask;
+        //   if (!vmiInterface->readXVA(pageBaseVA, processDtb, shadowPage, PagingDefinitions::pageSizeInBytes))
+        //   {
+        //       throw VmiException(fmt::format("{}: Unable to create Interrupt @ {:#x} in system with cr3 {:#x}",
+        //                                      std::source_location::current().function_name(),
+        //                                      pageBaseVA,
+        //                                      processDtb));
+        //   }
+        //   // we need a small buffer of data from the subsequent page because memory reads may be overlapping
+        //   auto bytesFromNextPage = std::vector<uint8_t>(16);
+        //   if (vmiInterface->readXVA(pageBaseVA + PagingDefinitions::pageSizeInBytes,
+        //                             processDtb,
+        //                             bytesFromNextPage,
+        //                             bytesFromNextPage.size()))
+        //   {
+        //       std::copy(bytesFromNextPage.begin(),
+        //                 bytesFromNextPage.end(),
+        //                 shadowPage.begin() + PagingDefinitions::pageSizeInBytes);
+        //   }
+        //   else
+        //   {
+        //       logger->warning(fmt::format("{}: Unable to read over page bounds from page: {} with dtb: {}",
+        //                                   std::source_location::current().function_name(),
+        //                                   pageBaseVA,
+        //                                   processDtb));
+        //   }
 
-        enableEvent();
-        logger->debug("Interrupt guard: Register RW event on gfn", {{"targetGFN", fmt::format("{:#x}", targetGFN)}});
+        //   enableEvent();
+        //   logger->debug("Interrupt guard: Register RW event on gfn", {{"targetGFN", fmt::format("{:#x}", targetGFN)}});
     }
 
     void InterruptGuard::teardown()
     {
-        if (guardEvent.type == VMI_EVENT_INVALID)
-        {
-            logger->debug("Guard not initialized. Skipping teardown.");
-        }
-        else
-        {
-            disableEvent();
-        }
+        //   if (guardEvent.type == VMI_EVENT_INVALID)
+        //   {
+        //       logger->debug("Guard not initialized. Skipping teardown.");
+        //   }
+        //   else
+        //   {
+        //       disableEvent();
+        //   }
     }
 
     void InterruptGuard::enableEvent()
     {
-        vmiInterface->registerEvent(guardEvent);
+        //  vmiInterface->registerEvent(guardEvent);
     }
 
     void InterruptGuard::disableEvent()
     {
-        vmiInterface->clearEvent(guardEvent, false);
+        //  vmiInterface->clearEvent(guardEvent, false);
     }
 
     event_response_t InterruptGuard::_guardCallback(__attribute__((unused)) vmi_instance_t vmiInstance,
