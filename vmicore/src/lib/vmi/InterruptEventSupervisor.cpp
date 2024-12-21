@@ -46,7 +46,7 @@ namespace VmiCore
         singleStepSupervisor->initializeSingleStepEvents();
         singleStepCallbackFunction = VMICORE_SETUP_SAFE_MEMBER_CALLBACK(singleStepCallback);
         contextSwitchCallbackFunction = VMICORE_SETUP_SAFE_MEMBER_CALLBACK(contextSwitchCallback);
-        //registerEventSupervisor->setContextSwitchCallback(contextSwitchCallbackFunction);
+        registerEventSupervisor->setContextSwitchCallback(contextSwitchCallbackFunction);
     }
 
     void InterruptEventSupervisor::teardown()
