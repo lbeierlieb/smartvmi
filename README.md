@@ -1,3 +1,23 @@
+# SmartVMI adaptation for bpbench
+
+This repository has been forked from [the official SmartVMI](https://github.com/GDATASoftwareAG/smartvmi) to work
+together with [bpbench](https://github.com/lbeierlieb/bpbench) in an effort to quantify the overhead of VMI
+breakpoints.
+
+Specifically, this branch is supposed to be used for measuring the overhead that occurs when SmartVMI is notified
+about every CR3 change.
+
+Usage:
+* run smartvmi
+  * tells the hypervisor to notify about every CR3 write event - registered callback does nothing
+  * it will look for bpbench.exe process
+  * because it doesn't find it, no breakpoint will be injected
+* run benchmark (e.g., [CPU-Z](https://www.cpuid.com/downloads/cpu-z/cpu-z_2.13-en.zip))
+  * its performance will be impacted by context switches/CR3 writes taking longer, leaving less time for the benchmark
+    to run
+* stopping smartvmi unregisters the CR3 write monitoring
+* compare benchmark results with and without smartvmi running
+
 # SmartVMI
 
 Virtual Machine Introspection (VMI) for memory forensics and machine-learning.
