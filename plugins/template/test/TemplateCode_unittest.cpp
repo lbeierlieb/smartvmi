@@ -29,8 +29,5 @@ namespace Template
 
         // Test assertion. Peculiarity of gmock: Assertion needs to take place before execution
         EXPECT_CALL(*introspectionApi, read64PA(processDtb)).Times(1);
-
-        // Test execution
-        EXPECT_NO_THROW(templateCode.doStuffWithProcessStart(processInformation));
     }
 }

@@ -157,7 +157,8 @@ namespace VmiCore
 
     void InterruptEventSupervisor::contextSwitchCallback(vmi_event_t* registerEvent)
     {
-        logger->error("Spam");
+        // do nothing on context switch - we just want to measure the overhead of the CR3 write events and not some
+        // logic that runs here
     }
 
     std::shared_ptr<InterruptGuard>
@@ -180,10 +181,7 @@ namespace VmiCore
         {
             throw VmiException(
                 fmt::format("{}: Breakpoint originalValue @ {:#x} is already an INT3 breakpoint.", __func__, targetPA));
-        } else {
-            logger->error(fmt::format("original value was {:#x} at {:#x}", originalValue, targetPA));
         }
-
         this->originalValue = originalValue;
     }
 

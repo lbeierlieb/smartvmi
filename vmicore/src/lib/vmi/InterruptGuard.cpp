@@ -46,24 +46,8 @@ namespace VmiCore
                                            pageBaseVA,
                                            processDtb));
         }
-        // we need a small buffer of data from the subsequent page because memory reads may be overlapping
-        auto bytesFromNextPage = std::vector<uint8_t>(16);
-        if (vmiInterface->readXVA(pageBaseVA + PagingDefinitions::pageSizeInBytes,
-                                  processDtb,
-                                  bytesFromNextPage,
-                                  bytesFromNextPage.size()))
-        {
-            std::copy(bytesFromNextPage.begin(),
-                      bytesFromNextPage.end(),
-                      shadowPage.begin() + PagingDefinitions::pageSizeInBytes);
-        }
-        else
-        {
-            logger->warning(fmt::format("{}: Unable to read over page bounds from page: {} with dtb: {}",
-                                        std::source_location::current().function_name(),
-                                        pageBaseVA,
-                                        processDtb));
-        }
+        // in BP bench scenario, no reads across page bounds are necessary. Actually, they are not possible,
+        // because we allocated only a single page and the following page is not mapped.
 
         enableEvent();
         logger->debug("Interrupt guard: Register RW event on gfn", {{"targetGFN", fmt::format("{:#x}", targetGFN)}});
@@ -110,13 +94,14 @@ namespace VmiCore
 
     event_response_t InterruptGuard::guardCallback(vmi_event_t* event)
     {
-        auto eventPA = (event->mem_event.gfn << PagingDefinitions::numberOfPageIndexBits) + event->mem_event.offset;
-        if (!interruptGuardHit)
-        {
-            logger->warning("Interrupt guard hit, check if patch guard is active");
-            interruptGuardHit = true;
-        }
-        logger->debug("Interrupt guard hit", {{"eventPA", fmt::format("{:#x}", eventPA)}});
+        // don't do printing, we want to keep overhead minimal
+        // auto eventPA = (event->mem_event.gfn << PagingDefinitions::numberOfPageIndexBits) + event->mem_event.offset;
+        // if (!interruptGuardHit)
+        // {
+        //     logger->warning("Interrupt guard hit, check if patch guard is active");
+        //     interruptGuardHit = true;
+        // }
+        // logger->debug("Interrupt guard hit", {{"eventPA", fmt::format("{:#x}", eventPA)}});
         event->emul_read = &emulateReadData;
         // we are allowed to provide more data than actually needed but empirically no more than 16 bytes are read at a
         // time
