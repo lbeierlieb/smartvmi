@@ -70,6 +70,11 @@ namespace Template
     }
 
     VmiCore::BpResponse TemplateCode::emptyCallback(VmiCore::IInterruptEvent&) {
+        breakpointHits++;
         return VmiCore::BpResponse::Continue;
+    }
+
+    int TemplateCode::getBreakpointHits() {
+        return breakpointHits;
     }
 }

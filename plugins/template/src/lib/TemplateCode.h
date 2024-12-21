@@ -14,6 +14,7 @@ namespace Template
 
         void doStuffWithProcessStart(std::shared_ptr<const VmiCore::ActiveProcessInformation> processInformation);
         VmiCore::BpResponse emptyCallback(VmiCore::IInterruptEvent&);
+        int getBreakpointHits();
 
       private:
         VmiCore::Plugin::PluginInterface* pluginInterface;
@@ -21,6 +22,7 @@ namespace Template
         std::shared_ptr<VmiCore::IIntrospectionAPI> lowLevelIntrospectionApi;
         std::shared_ptr<const VmiCore::ActiveProcessInformation> bpBenchProcessInfo;
         pid_t bpBenchPid;
+        int breakpointHits;
     };
 }
 

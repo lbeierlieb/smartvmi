@@ -49,6 +49,10 @@ namespace Template
         // Create the objects which contain the logic of the plugin
         templateCode = std::make_unique<TemplateCode>(pluginInterface, pluginInterface->getIntrospectionAPI());
     }
+
+    void Template::unload() {
+        logger->error("breakpoint hits:", {{"count", templateCode->getBreakpointHits()}});
+    }
 }
 
 // This is the init function. It is linked and called dynamically at runtime by
