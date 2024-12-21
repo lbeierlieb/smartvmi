@@ -1,3 +1,26 @@
+# SmartVMI adaptation for bpbench
+
+This repository has been forked from [the official SmartVMI](https://github.com/GDATASoftwareAG/smartvmi) to work
+together with [bpbench](https://github.com/lbeierlieb/bpbench) in an effort to quantify the overhead of VMI
+breakpoints.
+
+Specifically, this branch is supposed to be used for measuring the overhead of breakpoint handling and of hiding
+the breakpoint from read-accesses.
+
+Usage:
+* start bpbench.exe
+* start smartvmi
+  * gets all active processes
+  * finds the bpbench process
+  * inserts breakpoint into specified location of bpbench process memory
+  * modifies EPT table to hide the breakpoint
+* press Enter in bpbench
+  * starts the benchmarks
+    * triggers breakpoint
+    * reads from breakpoint page
+  * terminates
+* smartvmi can be terminated
+
 # SmartVMI
 
 Virtual Machine Introspection (VMI) for memory forensics and machine-learning.
