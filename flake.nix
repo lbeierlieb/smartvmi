@@ -51,16 +51,18 @@
                 craneLib = inputs.crane.mkLib pkgs;
                 libvmi = libvmi-gdata;
               };
+              plugins = import ./nix/build_plugins.nix {
+                inherit pkgs yara-cmake;
+              };
             in
             {
               default = pkgs.symlinkJoin {
                 name = "smartvmi";
-                paths = [
-                  vmicore
-                ];
+                paths = [ vmicore ] ++ builtins.attrValues plugins;
               };
               inherit vmicore;
-            };
+            }
+            // plugins;
         };
     };
 }
