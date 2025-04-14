@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "bext-di": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1743607915,
+        "narHash": "sha256-Xze6XlUHGBL3Fbnlnze90jSMTz58sbvlq6izklQFyZg=",
+        "owner": "boost-ext",
+        "repo": "di",
+        "rev": "20b6454c889f23c1e7c9eb5136cd7e3d6f6d718d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "boost-ext",
+        "ref": "v1.3.2",
+        "repo": "di",
+        "type": "github"
+      }
+    },
     "crane": {
       "locked": {
         "lastModified": 1733688869,
@@ -54,6 +71,7 @@
     },
     "root": {
       "inputs": {
+        "bext-di": "bext-di",
         "crane": "crane",
         "flake-parts": "flake-parts",
         "nixpkgs": "nixpkgs"
