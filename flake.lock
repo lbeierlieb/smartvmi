@@ -53,6 +53,23 @@
         "type": "github"
       }
     },
+    "libvmi-gdata": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1704453726,
+        "narHash": "sha256-PdsdQfk4Q79P+4TYu88c/4PtBTzY9c1AOn4WQOkBx9k=",
+        "owner": "GDATASoftwareAG",
+        "repo": "libvmi",
+        "rev": "224b204db82f8648bdd475f2b8a48aa4de143c97",
+        "type": "github"
+      },
+      "original": {
+        "owner": "GDATASoftwareAG",
+        "repo": "libvmi",
+        "rev": "224b204db82f8648bdd475f2b8a48aa4de143c97",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1733412085,
@@ -69,12 +86,30 @@
         "type": "github"
       }
     },
+    "nixpkgs-24-05": {
+      "locked": {
+        "lastModified": 1735563628,
+        "narHash": "sha256-OnSAY7XDSx7CtDoqNh8jwVwh4xNL/2HaJxGjryLWzX8=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "b134951a4c9f3c995fd7be05f3243f8ecd65d798",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-24.05",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "bext-di": "bext-di",
         "crane": "crane",
         "flake-parts": "flake-parts",
-        "nixpkgs": "nixpkgs"
+        "libvmi-gdata": "libvmi-gdata",
+        "nixpkgs": "nixpkgs",
+        "nixpkgs-24-05": "nixpkgs-24-05"
       }
     }
   },
