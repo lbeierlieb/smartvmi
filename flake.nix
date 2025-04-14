@@ -44,7 +44,23 @@
         {
           devShells = { };
           formatter = pkgs.nixfmt-rfc-style;
-          packages = { };
+          packages =
+            let
+              vmicore = pkgs.callPackage ./nix/build_vmicore.nix {
+                inherit bext-di;
+                craneLib = inputs.crane.mkLib pkgs;
+                libvmi = libvmi-gdata;
+              };
+            in
+            {
+              default = pkgs.symlinkJoin {
+                name = "smartvmi";
+                paths = [
+                  vmicore
+                ];
+              };
+              inherit vmicore;
+            };
         };
     };
 }
