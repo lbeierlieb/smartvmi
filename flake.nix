@@ -27,6 +27,7 @@
         }:
         let
           bext-di = pkgs.callPackage ./nix/build_bext-di.nix { source = inputs.bext-di; };
+          yara-cmake = pkgs.callPackage ./nix/build_yara-cmake.nix { };
         in
         {
           devShells = { };
