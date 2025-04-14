@@ -7,6 +7,9 @@ _VMICore_ is a VM Introsepction tool capable of dynamic malware analysis.
 
 ## How to Build
 
+[!NOTE]
+If you prefer to build with Nix, see [the Nix Readme](../nix/Readme.md).
+
 - Install Build Requirements
     - g++ or clang++
     - cmake
