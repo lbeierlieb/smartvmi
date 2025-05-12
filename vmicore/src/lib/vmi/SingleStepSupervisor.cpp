@@ -1,8 +1,8 @@
 #include "SingleStepSupervisor.h"
 #include "../GlobalControl.h"
-#include "VmiException.h"
 #include <cmath>
 #include <vmicore/filename.h>
+#include <vmicore/vmi/VmiException.h>
 
 namespace VmiCore
 {
@@ -97,9 +97,9 @@ namespace VmiCore
         vmiInterface->registerEvent(singleStepEvents[vcpuId]);
     }
 
-    event_response_t SingleStepSupervisor::_defaultSingleStepCallback(__attribute__((unused))
-                                                                      vmi_instance_t vmiInstance,
-                                                                      vmi_event_t* event)
+    event_response_t
+    SingleStepSupervisor::_defaultSingleStepCallback(__attribute__((unused)) vmi_instance_t vmiInstance,
+                                                     vmi_event_t* event)
     {
         auto eventResponse = VMI_EVENT_RESPONSE_NONE;
         try

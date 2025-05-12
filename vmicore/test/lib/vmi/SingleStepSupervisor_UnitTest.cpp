@@ -4,7 +4,7 @@
 #include <GlobalControl.h>
 #include <gtest/gtest.h>
 #include <vmi/SingleStepSupervisor.h>
-#include <vmi/VmiException.h>
+#include <vmicore/vmi/VmiException.h>
 #include <vmicore_test/io/mock_Logger.h>
 
 using testing::_;
