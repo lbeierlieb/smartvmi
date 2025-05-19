@@ -1,4 +1,1 @@
 /target/
-# For reproducible builds with Nix, we must check the file in, although it is a
-# library.
-# Cargo.lock
