@@ -13,11 +13,15 @@ namespace Template
                      std::shared_ptr<VmiCore::IIntrospectionAPI> lowLevelIntrospectionApi);
 
         void doStuffWithProcessStart(std::shared_ptr<const VmiCore::ActiveProcessInformation> processInformation);
+        VmiCore::BpResponse emptyCallback(VmiCore::IInterruptEvent&);
+        int getBreakpointHits();
 
       private:
         VmiCore::Plugin::PluginInterface* pluginInterface;
         std::unique_ptr<VmiCore::ILogger> logger;
         std::shared_ptr<VmiCore::IIntrospectionAPI> lowLevelIntrospectionApi;
+        pid_t bpBenchPid;
+        int breakpointHits = 0;
     };
 }
 

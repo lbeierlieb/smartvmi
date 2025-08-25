@@ -2,6 +2,7 @@
 #include "Filenames.h"
 #include <utility>
 #include <vmicore/callback.h>
+#include <vmicore/vmi/BpResponse.h>
 
 namespace Template
 {
@@ -14,12 +15,37 @@ namespace Template
           logger(this->pluginInterface->newNamedLogger(TEMPLATE_LOGGER_NAME)),
           lowLevelIntrospectionApi(std::move(lowLevelIntrospectionApi))
     {
-        // Register required events
-        pluginInterface->registerProcessStartEvent(VMICORE_SETUP_MEMBER_CALLBACK(doStuffWithProcessStart));
+        // find bpbench process and insert breakpoint
+        auto breakpointAddress = 0x2091a4f0fff;
+        auto processes = pluginInterface->getRunningProcesses();
+        logger->error("", {{"num processes", processes->size()}});
+        for (auto process : *processes)
+        {
+            if (process->name.compare("bpbench.exe") == 0)
+            {
+                // the userDtb has an invalid value, replacing it with kernelDtb as a band-aid
+                uint64_t* mutprocess = (uint64_t*)&process->processUserDtb;
+                *mutprocess = process->processDtb;
+                logger->info("found bpbench process",
+                             {{"name", process->name}, {"pid", process->pid}, {"cr3", process->processDtb}});
+                this->pluginInterface->createBreakpoint(
+                    breakpointAddress, *process, VMICORE_SETUP_MEMBER_CALLBACK(emptyCallback));
+                logger->info("Breakpoint in bpbench created", {{"breakpointAddress", breakpointAddress}});
+            }
+        }
     }
 
-    // As an example when a new process is started this callback is called. Check the PluginInterface.h for additional
-    // available events.
+    VmiCore::BpResponse TemplateCode::emptyCallback(VmiCore::IInterruptEvent&)
+    {
+        breakpointHits++;
+        return VmiCore::BpResponse::Continue;
+    }
+
+    int TemplateCode::getBreakpointHits()
+    {
+        return breakpointHits;
+    }
+
     void TemplateCode::doStuffWithProcessStart(std::shared_ptr<const ActiveProcessInformation> processInformation)
     {
         auto dtbContent = lowLevelIntrospectionApi->read64PA(processInformation->processUserDtb);
