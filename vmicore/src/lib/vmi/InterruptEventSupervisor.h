@@ -68,7 +68,8 @@ namespace VmiCore
 
         [[nodiscard]] event_response_t interruptCallback(addr_t interruptPA,
                                                          uint32_t vcpuId,
-                                                         const std::vector<std::shared_ptr<Breakpoint>>& breakpoints);
+                                                         const std::vector<std::shared_ptr<Breakpoint>>& breakpoints,
+                                                         vmi_event_t* event);
 
         void singleStepCallback(__attribute__((unused)) vmi_event_t* singleStepEvent);
 

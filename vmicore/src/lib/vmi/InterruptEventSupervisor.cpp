@@ -189,7 +189,7 @@ namespace VmiCore
             {
                 event->interrupt_event.reinject = DONT_REINJECT_INTERRUPT;
                 return interruptEventSupervisor->interruptCallback(
-                    eventPA, event->vcpu_id, breakpointsAtEventPA->second);
+                    eventPA, event->vcpu_id, breakpointsAtEventPA->second, event);
             }
         }
 
@@ -202,8 +202,11 @@ namespace VmiCore
         return eventResponse;
     }
 
-    event_response_t InterruptEventSupervisor::interruptCallback(
-        addr_t interruptPA, uint32_t vcpuId, const std::vector<std::shared_ptr<Breakpoint>>& breakpoints)
+    event_response_t
+    InterruptEventSupervisor::interruptCallback(addr_t interruptPA,
+                                                uint32_t vcpuId,
+                                                const std::vector<std::shared_ptr<Breakpoint>>& breakpoints,
+                                                vmi_event_t* event)
     {
         bool deactivateInterrupt = false;
 
@@ -228,14 +231,13 @@ namespace VmiCore
             }
         }
 
-        disableEvent(interruptPA);
+        static emul_insn_t emul_insn = {0};
+        emul_insn.dont_free = true;
+        emul_insn.data[0] = originalValuesByTargetPA[interruptPA];
 
-        if (!deactivateInterrupt)
-        {
-            singleStepSupervisor->setSingleStepCallback(vcpuId, singleStepCallbackFunction, interruptPA);
-        }
+        event->emul_insn = &emul_insn;
 
-        return VMI_EVENT_RESPONSE_NONE;
+        return VMI_EVENT_RESPONSE_SET_EMUL_INSN;
     }
 
     void InterruptEventSupervisor::singleStepCallback(vmi_event_t* singleStepEvent)
